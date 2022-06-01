@@ -3,6 +3,7 @@ package com.example.brvdemo
 import androidx.appcompat.app.AppCompatActivity
 import android.os.Bundle
 import android.widget.TextView
+import androidx.lifecycle.lifecycleScope
 import androidx.recyclerview.widget.RecyclerView
 import com.drake.brv.utils.models
 import com.drake.brv.utils.page
@@ -11,6 +12,9 @@ import com.drake.statelayout.StateConfig
 import com.scwang.smart.refresh.footer.ClassicsFooter
 import com.scwang.smart.refresh.header.MaterialHeader
 import com.scwang.smart.refresh.layout.SmartRefreshLayout
+import kotlinx.coroutines.coroutineScope
+import kotlinx.coroutines.delay
+import kotlinx.coroutines.launch
 
 class MainActivity : AppCompatActivity() {
 
@@ -20,6 +24,12 @@ class MainActivity : AppCompatActivity() {
 
         SmartRefreshLayout.setDefaultRefreshHeaderCreator { _, _ -> MaterialHeader(application) }
         SmartRefreshLayout.setDefaultRefreshFooterCreator { _, _ -> ClassicsFooter(application) }
+
+        StateConfig.apply {
+            emptyLayout = R.layout.page_empty
+            errorLayout = R.layout.page_error
+            loadingLayout = R.layout.page_loading
+        }
 
         findViewById<RecyclerView>(R.id.recycler).setup {
             addType<Item>(R.layout.item_main)
@@ -40,12 +50,22 @@ class MainActivity : AppCompatActivity() {
         }
 
         //内部recyclerview的item超过一屏，开启分页加载数据，出现白屏bug
-//        findViewById<RecyclerView>(R.id.recycler).page(loadMoreEnabled = false).apply {
-//            onRefresh { addData(fakeData()) }
+        findViewById<RecyclerView>(R.id.recycler).page(loadMoreEnabled = false).apply {
+            onRefresh {
+                lifecycleScope.launch {
+                    addData(fakeQueryData())
+                }
+            }
 //            refreshing()
-//        }
+            autoRefresh()
+        }
         //不开启分页设置数据，正常显示
-        findViewById<RecyclerView>(R.id.recycler).models = fakeData()
+//        findViewById<RecyclerView>(R.id.recycler).models = fakeData()
+    }
+
+    private suspend fun fakeQueryData(): List<Item> {
+        delay(3000)
+        return fakeData()
     }
 
     private fun fakeData(): List<Item> = Array(10) { i ->
